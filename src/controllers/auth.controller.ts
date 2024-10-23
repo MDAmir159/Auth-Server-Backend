@@ -10,6 +10,18 @@ export const signUp = async (req: Request, res: Response): Promise<void> => {
     try {
         const { email, firstName, lastName, mobileNumber, password } = req.body;
 
+        const existingUserByEmail = await User.findOne({ email });
+        if (existingUserByEmail) {
+            res.status(HTTPStatus.BAD_REQUEST).json({ message: 'Email already exists' });
+            return;
+        }
+
+        const existingUserByMobile = await User.findOne({ mobileNumber });
+        if (existingUserByMobile) {
+            res.status(HTTPStatus.BAD_REQUEST).json({ message: 'Mobile number already exists' });
+            return;
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const activationToken = jwt.sign({ email }, config.JWT_SECRET, { expiresIn: '1d' });
@@ -26,21 +38,44 @@ export const signUp = async (req: Request, res: Response): Promise<void> => {
         });
 
         await newUser.save();
-        const activationLink = `http://localhost:${config}/api/activate/${activationToken}`;
-        const msg = {
-            to: email,
-            from: 'islamamirul497@gmail.com',
-            subject: 'Account Activation',
-            html: `<h3>Click the link below to activate your account:</h3><a href="${activationLink}">Activate Account</a>`,
-        };
-        await sgMail.send(msg);
-
-        res.status(HTTPStatus.OK).send('Signup successful! Check your email to activate your account.');
+        const activationLink = `http://localhost:${config.PORT}/auth/activate/${activationToken}`;
+        res.status(HTTPStatus.OK).json({
+            message: 'Signup successful! Copy the link below to activate your account:',
+            activationLink: activationLink,
+        });
 
     } catch (error) {
         res.status(HTTPStatus.INTERNAL_SERVER_ERROR).json({ message: 'Server error', error });
     }
 };
+
+export const activateAccount = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { token } = req.params;
+        const decodedToken: any = jwt.verify(token, config.JWT_SECRET);
+
+        // Find user by email
+        const user = await User.findOne({ email: decodedToken.email });
+
+        if (!user) {
+            res.status(HTTPStatus.NOT_FOUND).send('User not found');
+            return;
+        }
+
+        if (user.isActivated) {
+            res.status(HTTPStatus.BAD_REQUEST).send('Account already activated');
+            return;
+        }
+
+        user.isActivated = true;
+        await user.save();
+
+        res.status(HTTPStatus.OK).send('Account activated successfully! You can now log in.');
+    } catch (error) {
+        console.error(error);
+        res.status(HTTPStatus.INTERNAL_SERVER_ERROR).send('Invalid or expired activation link');
+    }
+}
 
 export const logIn = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -48,8 +83,13 @@ export const logIn = async (req: Request, res: Response): Promise<void> => {
 
         const user = await User.findOne({ email });
 
-        if (!user || !user.isActivated) {
-            res.status(HTTPStatus.BAD_REQUEST).send('User not found or account not activated');
+        if (!user) {
+            res.status(HTTPStatus.NOT_FOUND).send('User not found');
+            return;
+        }
+
+        if (!user.isActivated) {
+            res.status(HTTPStatus.BAD_REQUEST).send('User account not activated');
             return;
         }
 
@@ -59,7 +99,7 @@ export const logIn = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        res.status(HTTPStatus.OK).send('Login successful! Random text: Welcome to your dashboard.');
+        res.status(HTTPStatus.OK).send('Login successful!');
     } catch (error) {
         console.error(error);
         res.status(HTTPStatus.INTERNAL_SERVER_ERROR).send('Error during login');

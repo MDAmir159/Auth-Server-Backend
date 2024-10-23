@@ -6,7 +6,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "start": "node dist/server.js",
-    "dev": "ts-node src/server.ts"
+    "dev": "nodemon src/server.ts",
+    "dev:ts": "ts-node src/server.ts"
   },
   "keywords": [],
   "author": "",
@@ -29,5 +30,8 @@
     "mongoose": "^8.7.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
   }
 }
