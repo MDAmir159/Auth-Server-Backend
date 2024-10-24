@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import sgMail from '@sendgrid/mail';
 import User from '../models/user.model';
 import { HTTPStatus } from '../helper/HttpStatus';
 import config from '../config';
@@ -25,8 +24,6 @@ export const signUp = async (req: Request, res: Response): Promise<void> => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const activationToken = jwt.sign({ email }, config.JWT_SECRET, { expiresIn: '1d' });
-
-        sgMail.setApiKey(process.env.SENDGRID_API_KEY as string);
 
         const newUser = new User({
             email,
@@ -58,22 +55,30 @@ export const activateAccount = async (req: Request, res: Response): Promise<void
         const user = await User.findOne({ email: decodedToken.email });
 
         if (!user) {
-            res.status(HTTPStatus.NOT_FOUND).send('User not found');
+            res.status(HTTPStatus.NOT_FOUND).json({ 
+                message: 'User not found'
+            });
             return;
         }
 
         if (user.isActivated) {
-            res.status(HTTPStatus.BAD_REQUEST).send('Account already activated');
+            res.status(HTTPStatus.BAD_REQUEST).json({ 
+                message: 'Account already activated'
+            });
             return;
         }
 
         user.isActivated = true;
         await user.save();
 
-        res.status(HTTPStatus.OK).send('Account activated successfully! You can now log in.');
+        res.status(HTTPStatus.OK).json({ 
+            message: 'Account activated successfully! You can now log in.'
+        });
     } catch (error) {
         console.error(error);
-        res.status(HTTPStatus.INTERNAL_SERVER_ERROR).send('Invalid or expired activation link');
+        res.status(HTTPStatus.INTERNAL_SERVER_ERROR).json({ 
+            message: 'Invalid or expired activation link'
+        });
     }
 }
 
@@ -84,24 +89,34 @@ export const logIn = async (req: Request, res: Response): Promise<void> => {
         const user = await User.findOne({ email });
 
         if (!user) {
-            res.status(HTTPStatus.NOT_FOUND).send('User not found');
+            res.status(HTTPStatus.NOT_FOUND).json({
+                message: "User not found"
+            });
             return;
         }
 
         if (!user.isActivated) {
-            res.status(HTTPStatus.BAD_REQUEST).send('User account not activated');
+            res.status(HTTPStatus.BAD_REQUEST).json({
+                message: "User account not activated"
+            });
             return;
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            res.status(HTTPStatus.BAD_REQUEST).send('Invalid credentials');
+            res.status(HTTPStatus.BAD_REQUEST).json({
+                message: "Invalid credentials"
+            });
             return;
         }
 
-        res.status(HTTPStatus.OK).send('Login successful!');
+        res.status(HTTPStatus.OK).json({
+            message: "Login successful!"
+        });
     } catch (error) {
         console.error(error);
-        res.status(HTTPStatus.INTERNAL_SERVER_ERROR).send('Error during login');
+        res.status(HTTPStatus.INTERNAL_SERVER_ERROR).json({
+            message: "Error during login"
+        });
     }
 };
