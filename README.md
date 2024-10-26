@@ -1,4 +1,4 @@
-# Auth Server Management Backend
+# Auth Server Backend
 
 Coding assessment-2 for Nerdevs recruitment process.
 ## Run Locally
@@ -6,7 +6,7 @@ Coding assessment-2 for Nerdevs recruitment process.
 Clone the project
 
 ```bash
-  git clone https://github.com/MDAmir159/Auth-Server-Management-Backend.git
+  git clone https://github.com/MDAmir159/Auth-Server-Backend.git
 ```
 
 Go to the project directory
